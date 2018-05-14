@@ -8,6 +8,10 @@
 #include <cstdint>
 #include <memory>
 #include <string>
+#include <limits>
+#include <algorithm>
+#include <cmath>
+#include <numeric>
 
 namespace RHMMUH005 {
 
@@ -42,7 +46,7 @@ namespace RHMMUH005 {
 				return *this;
 			}
 
-			Audio(Audio&& other) {
+			Audio(Audio&& rhs) {
 				sample_rate = rhs.sample_rate;
 				num_channels = rhs.num_channels;
 				audio_data = std::move(rhs.audio_data);
@@ -51,7 +55,7 @@ namespace RHMMUH005 {
 
 			Audio& operator=(Audio&& rhs) {
 				sample_rate = rhs.sample_rate;
-				num_channels = rhs.num_channels
+				num_channels = rhs.num_channels;
 				audio_data = std::move(rhs.audio_data);
 				rhs.audio_data.resize(0);
 
@@ -80,7 +84,7 @@ namespace RHMMUH005 {
 				return audio_sum;
 			}
 
-			Audio operator^(const std::par<int, int> range) const {
+			Audio operator^(const std::pair<int, int> range) const {
 
 				Audio audio_cut;
 
@@ -228,7 +232,7 @@ namespace RHMMUH005 {
 
 						return (T)(out_amp);
 					}
-			}
+			};
 	};
 
 
@@ -264,7 +268,7 @@ namespace RHMMUH005 {
 				return *this;
 			}
 
-			Audio(Audio&& other) {
+			Audio(Audio&& rhs) {
 				sample_rate = rhs.sample_rate;
 				num_channels = rhs.num_channels;
 				audio_data = std::move(rhs.audio_data);
@@ -273,7 +277,7 @@ namespace RHMMUH005 {
 
 			Audio& operator=(Audio&& rhs) {
 				sample_rate = rhs.sample_rate;
-				num_channels = rhs.num_channels
+				num_channels = rhs.num_channels;
 				audio_data = std::move(rhs.audio_data);
 				rhs.audio_data.resize(0);
 
@@ -313,7 +317,7 @@ namespace RHMMUH005 {
 				return audio_sum;
 			}
 
-			Audio operator^(const std::par<int, int> range) const {
+			Audio operator^(const std::pair<int, int> range) const {
 
 				Audio audio_cut;
 
@@ -379,12 +383,12 @@ namespace RHMMUH005 {
 
 				std::pair<float, float> rms;
 			
-				float left = std::sqrt(std::accumulate(this->audio_data.begin(), this->audio_data.end(); 0.0; [&](float sum, std::pair<T, T> val) {
-					retun sum + pow(val.first, 2)/this->audio_data.size();
+				float left = std::sqrt(std::accumulate(this->audio_data.begin(), this->audio_data.end(), 0.0, [&](float sum, std::pair<T, T> val) {
+					return sum + pow(val.first, 2)/this->audio_data.size();
 				}));
 
-				float right = std::sqrt(std::accumulate(this->audio_data.begin(), this->audio_data.end(); 0.0; [&](float sum, std::pair<T, T> val) {
-					retun sum + pow(val.second, 2)/this->audio_data.size();
+				float right = std::sqrt(std::accumulate(this->audio_data.begin(), this->audio_data.end(), 0.0, [&](float sum, std::pair<T, T> val) {
+					return sum + pow(val.second, 2)/this->audio_data.size();
 				}));
 
 				rms = std::make_pair(left, right);
@@ -470,7 +474,7 @@ namespace RHMMUH005 {
 						return ((T)(ampVal.first * (desired_rms.first / current_rms.first)), (T)(ampVal.second * (desired_rms.second / current_rms.second)));
 					}
 			};
-	}
+	};
 
 }
 
