@@ -127,11 +127,22 @@ namespace RHMMUH005 {
 				return audio_concatenation;
 			}
 
-			Audio operator*(const std::pair<float, float> factor) const;
+			Audio operator*(const std::pair<float, float> factor) const {
 
-			void reverseSound();
+				for (int i = 0; i < audio_data.size(); ++i) {
+					audio_data[i] *= factor.first;
+				}
 
-			float getRMS();
+				return *this;
+			}
+
+			void reverseSound() {
+				std::reverse(audio_data.begin(), audio_data.end());
+			}
+
+			float getRMS() {
+
+			}
 
 			Audio normalize(std::pair<float, float> rms) const;
 
