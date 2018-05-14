@@ -141,10 +141,66 @@ namespace RHMMUH005 {
 			}
 
 			float getRMS() {
-
+				return std::sqrt( (1/(float)audio_data.size()) * std::accumulate(audio_data.begin(), audio_data.end(), 0, [] (T sum, T val) {
+					return (sum + pow(val, 2));
+				}));
 			}
 
-			Audio normalize(std::pair<float, float> rms) const;
+			void loadFile(std::string filename) {
+
+				std::ifstream file(filename, std::ios::binary | std::ios::in);
+
+				if (!file.is_open()) {
+					std::cout << "File not loaded properly " << filename << std::endl;
+				}
+
+				else {
+					file.seekg(0, file.end);
+
+					int file_length = file.tellg();
+					file.seekg(0, file.beg);
+
+					int sample = (int) (file_length / (sizeof(T) * num_channels));
+
+					audio_data.resize(sample);
+
+					for (int i = 0; i < sample; ++i) {
+						char buffer[sizeof(T)];
+						file.read(buffer, sizeof(T));
+						audio_data[i] = *(T *)(buffer);
+					}
+
+					file.close();
+				}
+			}
+
+			void saveFile(std::string filename) {
+
+				std::string sample_rate_string = std::to_string(sample_rate);
+				std:: string bit_sample_string = std::to_string(8 * sizeof(T));
+
+				std::string output_file = filename + "_" + sample_rate_string + "_" + bit_sample_string + "_mono.raw";
+
+				std::ofstream out(output_file, std::ios::out | std::ios::binary);
+
+				if (!out.is_open()) {
+					std::cout << "Couldn't write contents to file " << output_file << std::endl;
+				}
+
+				else {
+					out.write((char *) &audio_data[0], audio_data.size() * sizeof(T));
+				}
+
+				out.close();
+			}
+
+			Audio normalize(std::pair<float, float> rms) const {
+				NormalizeFunctor op(rms.first);
+				Audio audio_normalized = *this;
+
+				std::transform(audio_data.begin(), audio_data.end(), audio_normalized.audio_data.begin(), op);
+				return op;
+			}
 
 			class NormalizeFunctor {
 
@@ -173,6 +229,12 @@ namespace RHMMUH005 {
 					}
 
 			}
+	}
+
+
+	template<typename T> class Audio <std::pair<T, T>> {
+
+
 
 	}
 
