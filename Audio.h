@@ -29,7 +29,7 @@ namespace RHMMUH005 {
 			Audio(std::vector<T> vec, int rate, int channels) : audio_data(vec), sample_rate(rate), num_channels(channels) { }
 
 			Audio(std::string filename, int rate, int channels) : sample_rate(rate), num_channels(channels) {
-				// readfile method(filename)
+				loadFile(filename);
 			}
 
 			Audio(const Audio& rhs) {
@@ -62,7 +62,7 @@ namespace RHMMUH005 {
 				return *this;
 			}
 
-			~Audio();
+			~Audio() { }
 
 			Audio operator+(const Audio& rhs) const {
 
@@ -70,7 +70,7 @@ namespace RHMMUH005 {
 				Audio audio_sum = *this;
 
 				for (int i = 0; i < audio_data.size(); ++i) {
-					T val = audio_sum.data[i] + sample.data[i];
+					T val = audio_sum.audio_data[i] + sample.audio_data[i];
 
 					if (val > std::numeric_limits<T>::max()) {
 						val = std::numeric_limits<T>::max();
@@ -79,14 +79,14 @@ namespace RHMMUH005 {
 						val = std::numeric_limits<T>::max();
 					}
 
-					audio_sum.data[i] = val;
+					audio_sum.audio_data[i] = val;
 				}
 				return audio_sum;
 			}
 
 			Audio operator^(const std::pair<int, int> range) const {
 
-				Audio audio_cut;
+				Audio audio_cut = *this;
 
 				for (int i = 0; i < audio_data.size(); ++i) {
 					if (i < range.first) {
@@ -99,35 +99,11 @@ namespace RHMMUH005 {
 				return audio_cut;
 			}
 
-			Audio rangeAdd(const Audio& rhs, const std::pair<int, int> range1, const std::pair<int, int> range2) {
-
-				Audio sample_1;
-				sample_1.audio_data.resize(range1.second - range1.first);
-
-				Audio sample_2;
-				sample_2.audio_data.resize(range2.second - range2.first);
-
-				T start_1 = this->audio_data.begin() + range1.first;
-				T end_1 = this->audio_data.begin() + range1.second;
-
-				std::copy(start_1, end_1, sample_1.audio_data.begin());
-
-				T start_2 = this->audio_data.begin() + range2.first;
-				T end_2 = this->audio_data.begin() + range2.second;
-
-				std::copy(start_2, end_2, sample_2.audio_data.begin());
-
-				Audio audio_range_add = sample_1 + sample_2;
-
-				return audio_range_add;
-
-			}
-
 			Audio<T> operator|(const Audio& rhs) const {
 				Audio<T> audio_concatenation = *this;
 
 				for (int i = 0; i < rhs.audio_data.size(); ++i) {
-					audio_concatenation.audio_data.push_back(rhs.data[i]);
+					audio_concatenation.audio_data.push_back(rhs.audio_data[i]);
 				}
 
 				return audio_concatenation;
@@ -135,21 +111,31 @@ namespace RHMMUH005 {
 
 			Audio operator*(const std::pair<float, float> factor) const {
 
+				Audio val = *this;
 				for (int i = 0; i < audio_data.size(); ++i) {
-					audio_data[i] *= factor.first;
+					val.audio_data[i] *= factor.first;
 				}
 
 				return *this;
 			}
 
-			void reverseSound() {
-				std::reverse(audio_data.begin(), audio_data.end());
+			Audio reverseSound() {
+				Audio rev = *this;
+				std::reverse(rev.audio_data.begin(), rev.audio_data.end());
+				return rev;
 			}
 
-			float getRMS() {
-				return std::sqrt( (1/(float)audio_data.size()) * std::accumulate(audio_data.begin(), audio_data.end(), 0, [] (T sum, T val) {
-					return (sum + pow(val, 2));
-				}));
+			std::pair<float, float> getRMS() {
+				float x = 0;
+				int val = 0;
+
+				x = std::accumulate(audio_data.begin(), audio_data.end(), x, [&val](float x, T y) {
+					val++;
+					return x + (y * y);
+				});
+
+				std::pair<float, float> final_rms(std::sqrt(x/val), 0.0f);
+				return final_rms;
 			}
 
 			void loadFile(std::string filename) {
@@ -201,10 +187,11 @@ namespace RHMMUH005 {
 			}
 
 			Audio normalize(std::pair<float, float> rms) const {
-				NormalizeFunctor op(rms.first);
-				Audio audio_normalized = *this;
+				Audio op = *this;
+				float current_rms = op.getRMS().first;
+				op.audio_data.resize(0);
 
-				std::transform(audio_data.begin(), audio_data.end(), audio_normalized.audio_data.begin(), op);
+				std::transform(audio_data.begin(), audio_data.end(), std::back_inserter(op.audio_data), NormalizeFunctor(rms.first, current_rms));
 				return op;
 			}
 
@@ -227,7 +214,7 @@ namespace RHMMUH005 {
 							out_amp = std::numeric_limits<T>::max();
 						}
 						else if (out_amp < std::numeric_limits<T>::min()) {
-							out_amp = std::numeric_limits<T>::mins();
+							out_amp = std::numeric_limits<T>::min();
 						}
 
 						return (T)(out_amp);
@@ -251,7 +238,7 @@ namespace RHMMUH005 {
 			Audio(std::vector<std::pair<T, T>> vec, int rate, int channels) : audio_data(vec), sample_rate(rate), num_channels(channels) { }
 
 			Audio(std::string filename, int rate, int channels) : sample_rate(rate), num_channels(channels) {
-				// readfile method(filename)
+				loadFile(filename);
 			}
 
 			Audio(const Audio& rhs) {
@@ -292,8 +279,8 @@ namespace RHMMUH005 {
 				Audio audio_sum = *this;
 
 				for (int i = 0; i < audio_data.size(); ++i) {
-					double r_val = audio_sum.data[i].second + sample.data[i].second;
-					double l_val = audio_sum.data[i].first + sample.data[i].first;
+					double r_val = audio_sum.audio_data[i].second + sample.audio_data[i].second;
+					double l_val = audio_sum.audio_data[i].first + sample.audio_data[i].first;
 
 					if (r_val > std::numeric_limits<T>::max()) {
 						r_val = std::numeric_limits<T>::max();
@@ -302,7 +289,7 @@ namespace RHMMUH005 {
 						r_val = std::numeric_limits<T>::max();
 					}
 
-					audio_sum.data[i].second = (T) r_val;
+					audio_sum.audio_data[i].second = (T) r_val;
 
 					if (l_val > std::numeric_limits<T>::max()) {
 						l_val = std::numeric_limits<T>::max();
@@ -311,7 +298,7 @@ namespace RHMMUH005 {
 						l_val = std::numeric_limits<T>::max();
 					}
 
-					audio_sum.data[i].first = (T) l_val;
+					audio_sum.audio_data[i].first = (T) l_val;
 				}
 
 				return audio_sum;
@@ -319,7 +306,7 @@ namespace RHMMUH005 {
 
 			Audio operator^(const std::pair<int, int> range) const {
 
-				Audio audio_cut;
+				Audio audio_cut = *this;
 
 				for (int i = 0; i < audio_data.size(); ++i) {
 					if (i < range.first) {
@@ -332,34 +319,11 @@ namespace RHMMUH005 {
 				return audio_cut;
 			}
 
-			Audio rangeAdd(const Audio& rhs, const std::pair<int, int> range1, const std::pair<int, int> range2) {
-
-				Audio sample_1;
-				sample_1.audio_data.resize(range1.second - range1.first);
-
-				Audio sample_2;
-				sample_2.audio_data.resize(range2.second - range2.first);
-
-				T start_1 = this->audio_data.begin() + range1.first;
-				T end_1 = this->audio_data.begin() + range1.second;
-
-				std::copy(start_1, end_1, sample_1.audio_data.begin());
-
-				T start_2 = this->audio_data.begin() + range2.first;
-				T end_2 = this->audio_data.begin() + range2.second;
-
-				std::copy(start_2, end_2, sample_2.audio_data.begin());
-
-				Audio audio_range_add = sample_1 + sample_2;
-
-				return audio_range_add;
-			}
-
 			Audio operator|(const Audio& rhs) const {
 				Audio audio_concatenation = *this;
 
 				for (int i = 0; i < rhs.audio_data.size(); ++i) {
-					audio_concatenation.audio_data.push_back(rhs.data[i]);
+					audio_concatenation.audio_data.push_back(rhs.audio_data[i]);
 				}
 
 				return audio_concatenation;
@@ -367,16 +331,19 @@ namespace RHMMUH005 {
 
 			Audio operator*(const std::pair<float, float> factor) const {
 
+				Audio val = *this;
 				for (int i = 0; i < audio_data.size(); ++i) {
-					audio_data[i].first *= factor.first;
-					audio_data[i].second *= factor.second;
+					val.audio_data[i].first = val.audio_data[i].first * factor.first;
+					val.audio_data[i].second = val.audio_data[i].second * factor.second;
 				}
 
-				return *this;
+				return val;
 			}
 
-			void reverseSound() {
-				std::reverse(audio_data.begin(), audio_data.end());
+			Audio reverseSound() {
+				Audio rev = *this;
+				std::reverse(rev.audio_data.begin(), rev.audio_data.end());
+				return rev;
 			}
 
 			std::pair<float, float> getRMS() {
@@ -443,8 +410,8 @@ namespace RHMMUH005 {
 
 				else {
 					for (auto i : audio_data) {
-						out.write((char *)&audio_data.first, sizeof(T));
-						out.write((char *)&audio_data.second, sizeof(T));
+						out.write((char *)&i.first, sizeof(T));
+						out.write((char *)&i.second, sizeof(T));
 					}
 				}
 
@@ -452,26 +419,48 @@ namespace RHMMUH005 {
 			}
 
 			Audio normalize(std::pair<float, float> rms) const {
-				NormalizeFunctor op(rms);
-				Audio audio_normalized = *this;
+				Audio op = *this;
+				std::pair<float, float> current_rms = op.getRMS();
+				op.audio_data.resize(0);
 
-				std::transform(audio_data.begin(), audio_data.end(), audio_normalized.audio_data.begin(), op);
+				std::transform(audio_data.begin(), audio_data.end(), std::back_inserter(op.audio_data), NormalizeFunctor(rms, current_rms));
 				return op;
 			}
 
 			class NormalizeFunctor {
 
 				public:
+					std::pair<double, double> rms;
 					std::pair<float, float> current_rms;
 					std::pair<float, float> desired_rms;
 
-					NormalizeFunctor (std::pair<float, float> current, std::pair<float, float> desired) : current_rms(current), desired_rms(desired) {
+					NormalizeFunctor (std::pair<float, float> current, std::pair<float, float> desired) : rms(std::pair<float, float>(desired_rms.first/current_rms.first, desired_rms.second/current_rms.second)) {
 
 					}
 
 					std::pair<T, T> operator() (std::pair<T, T> ampVal) {
 
-						return ((T)(ampVal.first * (desired_rms.first / current_rms.first)), (T)(ampVal.second * (desired_rms.second / current_rms.second)));
+						double amp_r = ampVal.second * rms.second;
+
+						if (amp_r > std::numeric_limits<T>::max()) {
+							amp_r = std::numeric_limits<T>::max();
+						}
+
+						else if (amp_r < std::numeric_limits<T>::min()) {
+							amp_r = std::numeric_limits<T>::min();
+						}
+
+						double amp_l = ampVal.first * rms.first;
+
+						if (amp_l > std::numeric_limits<T>::max()) {
+							amp_l = std::numeric_limits<T>::max();
+						}
+
+						else if (amp_l < std::numeric_limits<T>::min()) {
+							amp_l = std::numeric_limits<T>::min();
+						}
+
+						return std::pair<T, T>((T)amp_l, (T)amp_r);
 					}
 			};
 	};
