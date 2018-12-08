@@ -134,7 +134,9 @@ namespace RHMMUH005 {
 					return x + (y * y);
 				});
 
-				std::pair<float, float> final_rms(std::sqrt(x/val), 0.0f);
+				float sqrt_val = std::sqrt(x/val);
+
+				std::pair<float, float> final_rms(sqrt_val, 0.0f);
 				return final_rms;
 			}
 
@@ -434,8 +436,10 @@ namespace RHMMUH005 {
 					std::pair<float, float> current_rms;
 					std::pair<float, float> desired_rms;
 
-					NormalizeFunctor (std::pair<float, float> current, std::pair<float, float> desired) : rms(std::pair<float, float>(desired_rms.first/current_rms.first, desired_rms.second/current_rms.second)) {
-
+					NormalizeFunctor (std::pair<float, float> current, std::pair<float, float> desired) {
+						float left_rms = desired_rms.first/current_rms.first;
+						float right_rms = desired_rms.second/current_rms.second;
+						rms = std::pair<float, float>(left_rms, right_rms);
 					}
 
 					std::pair<T, T> operator() (std::pair<T, T> ampVal) {
